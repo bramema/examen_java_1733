@@ -1,6 +1,8 @@
 package com.carmotors.dao;
 
 import com.carmotors.excepcion.DaoException;
+import com.carmotors.modelo.DatosOrdenParaFactura.Repuesto;
+import com.carmotors.modelo.DetalleOrdenServicio;
 import com.carmotors.modelo.OrdenServicio;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -105,6 +107,69 @@ public class OrdenServicioDAOJdbc implements OrdenServicioDAO {
         return consultar(con, "WHERE e.nombre = ?", estado);
     }
 
+    @Override
+    public Optional<DetalleOrdenServicio> buscarDetallePorId(Connection con, int id) {
+        String sql = """
+                SELECT orden.*, c.nombre AS cliente, c.documento_identidad,
+                       v.marca, v.modelo, r.id AS repuesto_id, r.nombre AS repuesto,
+                       usados.cantidad, sr.precio_unitario_venta
+                FROM (""" + CONSULTA + """
+                    WHERE s.id = ?) orden
+                JOIN clientes c ON c.id = orden.cliente_id
+                JOIN vehiculos v ON v.id = orden.vehiculo_id
+                LEFT JOIN (
+                    SELECT reserva.repuesto_id, SUM(reserva.cantidad) AS cantidad
+                    FROM reservas_repuestos reserva
+                    JOIN reserva_estados estado ON estado.id = reserva.estado_id
+                    WHERE reserva.servicio_id = ? AND estado.nombre = 'CONSUMIDA'
+                    GROUP BY reserva.repuesto_id
+                ) usados ON 1 = 1
+                LEFT JOIN servicios_repuestos sr
+                    ON sr.servicio_id = orden.id AND sr.repuesto_id = usados.repuesto_id
+                LEFT JOIN repuestos r ON r.id = usados.repuesto_id
+                ORDER BY r.id
+                """;
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.setInt(2, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return Optional.empty();
+
+                OrdenServicio orden = mapearOrden(rs);
+                String cliente = rs.getString("cliente");
+                String documento = rs.getString("documento_identidad");
+                String marca = rs.getString("marca");
+                String modelo = rs.getString("modelo");
+                List<Repuesto> repuestos = new ArrayList<>();
+                do {
+                    long repuestoId = rs.getLong("repuesto_id");
+                    if (!rs.wasNull()) {
+                        repuestos.add(new Repuesto(repuestoId, rs.getString("repuesto"),
+                                rs.getLong("cantidad"), rs.getBigDecimal("precio_unitario_venta")));
+                    }
+                } while (rs.next());
+                return Optional.of(new DetalleOrdenServicio(orden, cliente, documento, marca, modelo, repuestos));
+            }
+        } catch (SQLException e) {
+            throw new DaoException("No se pudo consultar el detalle de la orden.", e);
+        }
+    }
+
+    private OrdenServicio mapearOrden(ResultSet rs) throws SQLException {
+        OrdenServicio o = new OrdenServicio();
+        o.setId(rs.getInt("id")); o.setVehiculoId(rs.getInt("vehiculo_id"));
+        o.setClienteId(rs.getInt("cliente_id")); o.setPlaca(rs.getString("placa"));
+        o.setTipoMantenimiento(rs.getString("tipo")); o.setEstado(rs.getString("estado"));
+        o.setFechaRecepcion(rs.getTimestamp("fecha_recepcion").toLocalDateTime());
+        Timestamp completado = rs.getTimestamp("fecha_completado");
+        Timestamp entrega = rs.getTimestamp("fecha_entrega");
+        o.setFechaCompletado(completado == null ? null : completado.toLocalDateTime());
+        o.setFechaEntrega(entrega == null ? null : entrega.toLocalDateTime());
+        o.setDescripcionProblema(rs.getString("descripcion_problema"));
+        o.setCostoManoObra(rs.getBigDecimal("mano_obra"));
+        return o;
+    }
+
     private List<OrdenServicio> consultar(Connection con, String filtro, Object valor) {
         try (PreparedStatement ps = con.prepareStatement(CONSULTA + filtro + " ORDER BY s.fecha_recepcion, s.id")) {
             if (valor instanceof Integer id) ps.setInt(1, id);
@@ -112,18 +177,7 @@ public class OrdenServicioDAOJdbc implements OrdenServicioDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 List<OrdenServicio> ordenes = new ArrayList<>();
                 while (rs.next()) {
-                    OrdenServicio o = new OrdenServicio();
-                    o.setId(rs.getInt("id")); o.setVehiculoId(rs.getInt("vehiculo_id"));
-                    o.setClienteId(rs.getInt("cliente_id")); o.setPlaca(rs.getString("placa"));
-                    o.setTipoMantenimiento(rs.getString("tipo")); o.setEstado(rs.getString("estado"));
-                    o.setFechaRecepcion(rs.getTimestamp("fecha_recepcion").toLocalDateTime());
-                    Timestamp completado = rs.getTimestamp("fecha_completado");
-                    Timestamp entrega = rs.getTimestamp("fecha_entrega");
-                    o.setFechaCompletado(completado == null ? null : completado.toLocalDateTime());
-                    o.setFechaEntrega(entrega == null ? null : entrega.toLocalDateTime());
-                    o.setDescripcionProblema(rs.getString("descripcion_problema"));
-                    o.setCostoManoObra(rs.getBigDecimal("mano_obra"));
-                    ordenes.add(o);
+                    ordenes.add(mapearOrden(rs));
                 }
                 return ordenes;
             }

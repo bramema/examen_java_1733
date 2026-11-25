@@ -4,10 +4,16 @@ import com.carmotors.dao.OrdenServicioDAO;
 import com.carmotors.dao.factory.DAOFactory;
 import com.carmotors.excepcion.DaoException;
 import com.carmotors.excepcion.ValidacionException;
+import com.carmotors.excepcion.ExportacionException;
+import com.carmotors.modelo.DetalleOrdenServicio;
 import com.carmotors.modelo.OrdenServicio;
 import com.carmotors.modelo.Vehiculo;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Clock;
@@ -165,6 +171,51 @@ public class OrdenServicioService {
     public Optional<OrdenServicio> buscarPorId(int id) {
         validarId(id);
         return consultar(con -> dao.buscarPorId(con, id));
+    }
+
+    public Optional<Path> exportarOrden(int id) {
+        validarId(id);
+        return consultar(con -> dao.buscarDetallePorId(con, id)).map(this::guardarOrden);
+    }
+
+    private Path guardarOrden(DetalleOrdenServicio detalle) {
+        OrdenServicio orden = detalle.orden();
+        StringBuilder texto = new StringBuilder("CARMOTORS - ORDEN DE SERVICIO #")
+                .append(orden.getId())
+                .append("\nEstado: ").append(orden.getEstado())
+                .append("\nMantenimiento: ").append(orden.getTipoMantenimiento())
+                .append("\nRecepción: ").append(orden.getFechaRecepcion())
+                .append("\nDescripción: ").append(Objects.toString(orden.getDescripcionProblema(), "Sin descripción"))
+                .append("\nCliente: ").append(detalle.cliente()).append(" | Documento: ").append(detalle.documento())
+                .append("\nVehículo: ").append(detalle.marca()).append(" ").append(detalle.modelo())
+                .append(" | Placa: ").append(orden.getPlaca())
+                .append("\n\nREPUESTOS UTILIZADOS\n");
+        BigDecimal totalRepuestos = new BigDecimal("0.00");
+        if (detalle.repuestos().isEmpty()) texto.append("Sin repuestos utilizados.\n");
+        for (var repuesto : detalle.repuestos()) {
+            texto.append(repuesto.nombre()).append(" | cantidad: ").append(repuesto.cantidad())
+                    .append(" | precio unitario: ").append(repuesto.precioUnitarioHistorico().toPlainString())
+                    .append(" | importe: ").append(repuesto.importe().toPlainString()).append("\n");
+            totalRepuestos = totalRepuestos.add(repuesto.importe());
+        }
+        BigDecimal manoObra = orden.getCostoManoObra();
+        texto.append("\nTotal repuestos: ").append(totalRepuestos.toPlainString())
+                .append("\nMano de obra: ").append(manoObra.toPlainString())
+                .append("\nTOTAL: ").append(totalRepuestos.add(manoObra).toPlainString()).append("\n");
+
+        Path carpeta = Path.of("").toAbsolutePath();
+        Path destino = carpeta.resolve("orden_servicio_" + orden.getId() + ".txt");
+        try {
+            Path temporal = Files.createTempFile(carpeta, ".orden-servicio-", ".tmp");
+            try {
+                Files.writeString(temporal, texto, StandardCharsets.UTF_8);
+                return Files.move(temporal, destino, StandardCopyOption.REPLACE_EXISTING);
+            } finally {
+                Files.deleteIfExists(temporal);
+            }
+        } catch (IOException | SecurityException e) {
+            throw new ExportacionException("No se pudo guardar " + destino.getFileName() + ".", e);
+        }
     }
 
     public List<OrdenServicio> listar() {

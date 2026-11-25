@@ -1,5 +1,6 @@
 package com.carmotors.dao;
 
+import com.carmotors.modelo.DetalleOrdenServicio;
 import com.carmotors.modelo.OrdenServicio;
 import java.sql.Connection;
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ public interface OrdenServicioDAO {
     boolean consumoCompleto(Connection con, int id);
     int crear(Connection con, OrdenServicio orden);
     Optional<OrdenServicio> buscarPorId(Connection con, int id);
+    Optional<DetalleOrdenServicio> buscarDetallePorId(Connection con, int id);
     List<OrdenServicio> listar(Connection con);
     List<OrdenServicio> listarPorVehiculo(Connection con, int vehiculoId);
     List<OrdenServicio> listarPorEstado(Connection con, String estado);

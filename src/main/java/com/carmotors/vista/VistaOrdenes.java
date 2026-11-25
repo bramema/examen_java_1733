@@ -51,8 +51,9 @@ public final class VistaOrdenes {
             consola.mostrar("4. Consultar órdenes por vehículo (placa)");
             consola.mostrar("5. Consultar órdenes por estado");
             consola.mostrar("6. Operaciones realizadas y cobros de mano de obra");
+            consola.mostrar("7. Exportar Orden de Servicio");
             consola.mostrar("0. Regresar");
-            String opcion = consola.leerOpcion("Opción", "1", "2", "3", "4", "5", "6", "0");
+            String opcion = consola.leerOpcion("Opción", "1", "2", "3", "4", "5", "6", "7", "0");
             if (opcion == null || "0".equals(opcion)) return;
             switch (opcion) {
                 case "1" -> crear();
@@ -64,6 +65,7 @@ public final class VistaOrdenes {
                     Integer id = enteroPositivo("Número de orden existente");
                     if (id != null) operaciones.mostrar(id);
                 }
+                case "7" -> exportarOrden();
                 default -> throw new IllegalStateException("Opción ya validada");
             }
         }
@@ -94,6 +96,12 @@ public final class VistaOrdenes {
             // OrdenServicioService + DAO obtienen la clave generada por MySQL.
             consola.mostrar(ordenes.crear(vehiculoId.toString(), tipo, problema));
         });
+    }
+
+    private void exportarOrden() {
+        Integer id = enteroPositivo("ID de la orden");
+        if (id == null) return;
+        ejecutar(() -> consola.mostrar(ordenes.exportar(id.toString())));
     }
 
     private void buscarPorId() {

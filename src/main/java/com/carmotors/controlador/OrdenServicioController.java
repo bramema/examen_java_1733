@@ -27,6 +27,12 @@ public class OrdenServicioController {
         return ejecutar(() -> servicio.buscarPorId(entero(id)).map(this::formatear).orElse("No existe una orden con ese id."));
     }
 
+    public String exportar(String id) {
+        return ejecutar(() -> servicio.exportarOrden(entero(id))
+                .map(archivo -> "Archivo generado: " + archivo.getFileName())
+                .orElse("No existe una orden con ese ID."));
+    }
+
     public String listar() {
         return ejecutar(() -> filas(servicio.listar()));
     }
