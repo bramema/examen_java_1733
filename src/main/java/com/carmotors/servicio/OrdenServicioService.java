@@ -203,7 +203,7 @@ public class OrdenServicioService {
                 .append("\nMano de obra: ").append(manoObra.toPlainString())
                 .append("\nTOTAL: ").append(totalRepuestos.add(manoObra).toPlainString()).append("\n");
 
-        Path carpeta = Path.of("").toAbsolutePath();
+        Path carpeta = carpetaProyecto();
         Path destino = carpeta.resolve("orden_servicio_" + orden.getId() + ".txt");
         try {
             Path temporal = Files.createTempFile(carpeta, ".orden-servicio-", ".tmp");
@@ -216,6 +216,16 @@ public class OrdenServicioService {
         } catch (IOException | SecurityException e) {
             throw new ExportacionException("No se pudo guardar " + destino.getFileName() + ".", e);
         }
+    }
+
+    private Path carpetaProyecto() {
+        Path directorioActual = Path.of("").toAbsolutePath().normalize();
+        for (Path carpeta = directorioActual; carpeta != null; carpeta = carpeta.getParent()) {
+            if (Files.isRegularFile(carpeta.resolve("pom.xml"))) {
+                return carpeta;
+            }
+        }
+        return directorioActual;
     }
 
     public List<OrdenServicio> listar() {

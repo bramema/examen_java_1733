@@ -44,7 +44,7 @@ public final class VistaOrdenes {
 
     private void navegarAdministrador() {
         while (true) {
-            consola.titulo("ATENCIÓN Y ÓRDENES | ADMINISTRADOR");
+            consola.titulo("ÓRDENES DE SERVICIO | ADMINISTRADOR");
             consola.mostrar("1. Crear orden de servicio");
             consola.mostrar("2. Buscar orden por número");
             consola.mostrar("3. Listar órdenes");

@@ -34,7 +34,7 @@ public final class MenuAdministrador {
         while (true) {
             consola.titulo("CARMOTORS | ADMINISTRADOR");
             consola.mostrar("1. Supervisión del taller");
-            consola.mostrar("2. Atención y órdenes de servicio");
+            consola.mostrar("2. Órdenes de servicio");
             consola.mostrar("3. Gestión administrativa (clientes, vehículos, técnicos, repuestos y proveedores)");
             consola.mostrar("4. Inventario y abastecimiento");
             consola.mostrar("5. Facturación y entrega de vehículos");
