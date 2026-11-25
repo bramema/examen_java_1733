@@ -5,6 +5,7 @@ import com.carmotors.excepcion.ValidacionException;
 import com.carmotors.modelo.FilaReporteDTO;
 import com.carmotors.modelo.OrdenReporte;
 import com.carmotors.modelo.ReporteDTO;
+import com.carmotors.modelo.TiempoPromedioReparacion;
 import com.carmotors.modelo.TipoReporte;
 
 import java.util.Objects;
@@ -29,9 +30,14 @@ public final class VistaReportes {
             consola.mostrar("1. Servicios solicitados por tipo de mantenimiento");
             consola.mostrar("2. Productividad: participaciones por técnico");
             consola.mostrar("3. Consumo de repuestos (unidades)");
+            consola.mostrar("4. Ver Tiempos Promedio de Reparación");
             consola.mostrar("0. Regresar");
-            String opcion = consola.leerOpcion("Opción", "1", "2", "3", "0");
+            String opcion = consola.leerOpcion("Opción", "1", "2", "3", "4", "0");
             if (opcion == null || "0".equals(opcion)) return;
+            if ("4".equals(opcion)) {
+                mostrarTiemposPromedioReparacion();
+                continue;
+            }
             TipoReporte tipo = switch (opcion) {
                 case "1" -> TipoReporte.SERVICIOS_SOLICITADOS;
                 case "2" -> TipoReporte.PRODUCTIVIDAD_TECNICOS;
@@ -40,6 +46,24 @@ public final class VistaReportes {
             };
             ejecutarConsulta(tipo);
         }
+    }
+
+    private void mostrarTiemposPromedioReparacion() {
+        try {
+            var tiempos = controlador.verTiemposPromedioReparacion();
+            consola.titulo("TIEMPOS PROMEDIO DE REPARACIÓN");
+            consola.mostrar("Tipo de mantenimiento | Duración promedio");
+            for (TiempoPromedioReparacion tiempo : tiempos) {
+                String duracion = tiempo.duracionPromedio()
+                        .map(promedio -> "%d días, %d horas, %d minutos".formatted(
+                                promedio.toDays(), promedio.toHoursPart(), promedio.toMinutesPart()))
+                        .orElse("Sin servicios entregados");
+                consola.mostrar(tiempo.tipoMantenimiento() + " | " + duracion);
+            }
+        } catch (RuntimeException error) {
+            consola.mostrar("No se pudo generar el reporte: " + error.getMessage());
+        }
+        consola.esperar();
     }
 
     private void ejecutarConsulta(TipoReporte tipo) {

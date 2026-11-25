@@ -36,6 +36,7 @@ import com.carmotors.dao.factory.OperacionOrdenDAOFactory;
 import com.carmotors.dao.factory.OrdenServicioDAOFactory;
 import com.carmotors.dao.factory.ProveedorDAOFactory;
 import com.carmotors.dao.factory.ProveedorRepuestoDAOFactory;
+import com.carmotors.dao.factory.ReporteServiciosDAOFactory;
 import com.carmotors.dao.factory.RepuestoDAOFactory;
 import com.carmotors.dao.factory.RepuestoTipoDAOFactory;
 import com.carmotors.dao.factory.ServicioCatalogoDAOFactory;
@@ -62,6 +63,7 @@ import com.carmotors.servicio.ProveedorRepuestoService;
 import com.carmotors.servicio.ProveedorService;
 import com.carmotors.servicio.PublicadorInventario;
 import com.carmotors.servicio.RecordatorioPreventivoService;
+import com.carmotors.servicio.ReporteServicio;
 import com.carmotors.servicio.ReporteStrategy;
 import com.carmotors.servicio.RepuestoService;
 import com.carmotors.servicio.RepuestoTipoService;
@@ -230,11 +232,12 @@ public final class Main {
         VistaTrabajosTecnico trabajos = new VistaTrabajosTecnico(consola, consultaTaller, ordenCtrl, operaciones);
 
         // Las estrategias existentes consultan MySQL mediante sus DAO y ConexionFactory.
-        // El controller únicamente adapta los filtros de fecha y orden.
+        ReporteServicio reporteServicio = new ReporteServicio(
+                new ReporteServiciosDAOFactory().obtenerDAO(), conexiones);
         ReporteController reporteCtrl = new ReporteController(List.<ReporteStrategy>of(
                 new ServiciosMasSolicitadosStrategy(),
                 new ProductividadTecnicosStrategy(),
-                new ConsumoRepuestosStrategy()));
+                new ConsumoRepuestosStrategy()), reporteServicio);
         VistaReportes reportes = new VistaReportes(consola, reporteCtrl);
 
         VistaLogin login = new VistaLogin(consola);

@@ -2,6 +2,7 @@ package com.carmotors.dao;
 
 import com.carmotors.excepcion.DaoException;
 import com.carmotors.modelo.FiltroReporte;
+import com.carmotors.modelo.ServicioEntregadoReporteDato;
 import com.carmotors.modelo.SolicitudServicioReporteDato;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,6 +20,13 @@ public class ReporteServiciosDAOJdbc implements ReporteServiciosDAO {
             JOIN mantenimiento_tipos tipo ON tipo.id = orden.mantenimiento_tipo_id
             WHERE orden.fecha_recepcion >= ? AND orden.fecha_recepcion <= ?
             """;
+    private static final String CONSULTAR_SERVICIOS_ENTREGADOS = """
+            SELECT tipo.nombre, orden.fecha_recepcion, orden.fecha_entrega
+            FROM servicios orden
+            JOIN mantenimiento_tipos tipo ON tipo.id = orden.mantenimiento_tipo_id
+            WHERE orden.fecha_recepcion IS NOT NULL AND orden.fecha_entrega IS NOT NULL
+            """;
+
     // MySQL admite hasta seis dígitos de precisión en DATETIME.
     private static final LocalTime FIN_DEL_DIA = LocalTime.of(23, 59, 59, 999_999_000);
 
@@ -40,6 +48,23 @@ public class ReporteServiciosDAOJdbc implements ReporteServiciosDAO {
             return solicitudes;
         } catch (SQLException e) {
             throw new DaoException("No se pudo consultar el reporte de servicios más solicitados.", e);
+        }
+    }
+
+    @Override
+    public List<ServicioEntregadoReporteDato> listarServiciosEntregados(Connection conexion) {
+        try (PreparedStatement sentencia = conexion.prepareStatement(CONSULTAR_SERVICIOS_ENTREGADOS);
+             ResultSet resultados = sentencia.executeQuery()) {
+            List<ServicioEntregadoReporteDato> servicios = new ArrayList<>();
+            while (resultados.next()) {
+                servicios.add(new ServicioEntregadoReporteDato(
+                        resultados.getString("nombre"),
+                        resultados.getObject("fecha_recepcion", LocalDateTime.class),
+                        resultados.getObject("fecha_entrega", LocalDateTime.class)));
+            }
+            return servicios;
+        } catch (SQLException e) {
+            throw new DaoException("No se pudieron consultar los servicios entregados.", e);
         }
     }
 }

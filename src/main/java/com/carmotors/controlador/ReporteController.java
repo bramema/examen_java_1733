@@ -5,6 +5,8 @@ import com.carmotors.modelo.FiltroReporte;
 import com.carmotors.modelo.OrdenReporte;
 import com.carmotors.modelo.ReporteDTO;
 import com.carmotors.modelo.TipoReporte;
+import com.carmotors.modelo.TiempoPromedioReparacion;
+import com.carmotors.servicio.ReporteServicio;
 import com.carmotors.servicio.ReporteStrategy;
 
 import java.time.LocalDate;
@@ -18,7 +20,10 @@ import java.util.Objects;
 public final class ReporteController {
     private final Map<TipoReporte, ReporteStrategy> estrategias = new EnumMap<>(TipoReporte.class);
 
-    public ReporteController(List<ReporteStrategy> estrategias) {
+    private final ReporteServicio reporteServicio;
+
+    public ReporteController(List<ReporteStrategy> estrategias, ReporteServicio reporteServicio) {
+        this.reporteServicio = Objects.requireNonNull(reporteServicio);
         Objects.requireNonNull(estrategias, "Las estrategias son obligatorias");
         for (ReporteStrategy estrategia : estrategias) {
             Objects.requireNonNull(estrategia, "No se admite una estrategia nula");
@@ -41,6 +46,10 @@ public final class ReporteController {
                 convertirFecha(fechaInicio, "inicial"),
                 convertirFecha(fechaFin, "final"), orden);
         return estrategia.generar(filtro);
+    }
+
+    public List<TiempoPromedioReparacion> verTiemposPromedioReparacion() {
+        return reporteServicio.obtenerTiemposPromedioReparacion();
     }
 
     private LocalDate convertirFecha(String valor, String nombre) {
